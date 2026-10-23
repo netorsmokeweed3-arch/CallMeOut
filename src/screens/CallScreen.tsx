@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, SafeAreaView, useColorScheme } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import { AudioPlayer, createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { Colors } from '../constants/theme';
 
 interface CallScreenProps {
@@ -16,7 +16,6 @@ interface CallScreenProps {
 const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage, callType, audioUri, voiceUri, onEndCall }) => {
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
   const [callDuration, setCallDuration] = useState<number>(0);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme === 'light' ? 'light' : 'dark'];
@@ -36,99 +35,90 @@ const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage, callTy
 
   // Відтворення мелодії без вильوتів помилок, якщо файл не задано
   useEffect(() => {
-    let ringtoneSound: Audio.Sound | null = null;
+    // Рингтон відтворюється лише якщо користувач вибрав власний файл.
+    // Вбудованих файлів у проєкті немає, тому без audioUri звук не грається.
+    if (isAnswered || !audioUri) return;
+
+    let ringtonePlayer: AudioPlayer | null = null;
+    let cancelled = false;
 
     const playRingtone = async () => {
       try {
-        let soundAsset = audioUri 
-          ? { uri: audioUri } 
-          : callType === 'viber' 
-            ? require('../assets/sounds/viber_call.mp3') 
-            : callType === 'telegram' 
-              ? require('../assets/sounds/telegram_call.mp3') 
-              : null; // Безпечний нульовий об'єкт замість неіснуючого дефолту
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: true,
+          interruptionMode: 'duckOthers',
+        });
+        if (cancelled) return;
 
-        if (soundAsset) {
-          const { sound: createdSound } = await Audio.Sound.createAsync(soundAsset, { 
-            shouldPlay: true, 
-            isLooping: true 
-          });
-          ringtoneSound = createdSound;
-          setSound(createdSound);
-        }
+        ringtonePlayer = createAudioPlayer({ uri: audioUri }, { updateInterval: 500 });
+        ringtonePlayer.loop = true;
+        ringtonePlayer.play();
       } catch (error) {
-        console.log("Пропущено відтворення кастомного рингтона:", error);
+        console.log('Пропущено відтворення кастомного рингтона:', error);
       }
     };
 
-    if (!isAnswered) {
-      playRingtone();
-    }
+    playRingtone();
 
     return () => {
-      if (ringtoneSound) {
-        ringtoneSound.unloadAsync();
+      cancelled = true;
+      if (ringtonePlayer) {
+        ringtonePlayer.pause();
+        ringtonePlayer.remove();
+        ringtonePlayer = null;
       }
     };
-  }, [callType, isAnswered, audioUri]);
+  }, [isAnswered, audioUri]);
 
+  // Після відповіді: таймер тривалості та відтворення голосового повідомлення через динамік розмови
   useEffect(() => {
-    let interval: any;
-    if (isAnswered) {
-      if (sound) {
-        sound.stopAsync().catch(() => {});
+    if (!isAnswered) return;
+
+    const interval = setInterval(() => setCallDuration(prev => prev + 1), 1000);
+    let voicePlayer: AudioPlayer | null = null;
+    let cancelled = false;
+
+    const playVoiceMessage = async () => {
+      if (!voiceUri) return;
+      try {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          shouldPlayInBackground: true,
+          allowsRecording: false,
+          shouldRouteThroughEarpiece: true,
+          interruptionMode: 'doNotMix',
+        });
+        if (cancelled) return;
+
+        voicePlayer = createAudioPlayer({ uri: voiceUri });
+        voicePlayer.play();
+      } catch (error) {
+        console.log('Помилка відтворення голосу:', error);
       }
-
-      interval = setInterval(() => setCallDuration(prev => prev + 1), 1000);
-
-      const playVoiceMessage = async () => {
-        if (!voiceUri) return;
-        try {
-          await Audio.setAudioModeAsync({
-            playsInSilentModeIOS: true,
-            staysActiveInBackground: true,
-            allowsRecordingIOS: false,
-            playThroughEarpieceAndroid: true,
-          });
-
-          const { sound: voiceSound } = await Audio.Sound.createAsync(
-            { uri: voiceUri },
-            { shouldPlay: true }
-          );
-          setSound(voiceSound);
-        } catch (error) {
-          console.log("Помилка відтворення голосу:", error);
-        }
-      };
-
-      playVoiceMessage();
-    }
-
-    return () => clearInterval(interval);
-  }, [isAnswered]);
-
-  useEffect(() => {
-    return () => { 
-      if (sound && typeof sound.unloadAsync === 'function') {
-        sound.unloadAsync();
-      } 
     };
-  }, [sound]);
+
+    playVoiceMessage();
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      if (voicePlayer) {
+        voicePlayer.pause();
+        voicePlayer.remove();
+        voicePlayer = null;
+      }
+    };
+  }, [isAnswered, voiceUri]);
 
   const formatTime = (secs: number) => 
     `${Math.floor(secs / 60).toString().padStart(2, '0')}:${(secs % 60).toString().padStart(2, '0')}`;
 
-  const handleAccept = async () => { 
-    if (sound) {
-      await sound.stopAsync().catch(() => {});
-    }
-    setIsAnswered(true); 
+  const handleAccept = () => {
+    setIsAnswered(true);
   };
 
-  const handleDecline = async () => {
-    if (sound && typeof sound.stopAsync === 'function') {
-      await sound.stopAsync().catch(() => {});
-    }
+  const handleDecline = () => {
     onEndCall();
   };
 

@@ -41,7 +41,9 @@ export default function App() {
       }
     });
 
-    // 2. Слухачі подій у реальному часі (коли додаток згорнутий або активний)
+    // 2. Відкриття CallScreen лише за реальним тапом користувача по сповіщенню.
+    // Слухач отримання сповіщення (addNotificationReceivedListener) навмисно НЕ використовується,
+    // щоб фонове надходження сповіщення не імітувало дзвінок.
     const responseSub = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
       if (data && data.openCallScreen) {
@@ -49,13 +51,8 @@ export default function App() {
       }
     });
 
-    const receivedSub = Notifications.addNotificationReceivedListener(_notification => {
-      setIsInCall(true);
-    });
-
     return () => {
       responseSub.remove();
-      receivedSub.remove();
     };
   }, []);
 

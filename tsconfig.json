@@ -11,6 +11,9 @@
       ]
     }
   },
+  "exclude": [
+    "src/components/**"
+  ],
   "include": [
     "**/*.ts",
     "**/*.tsx",
