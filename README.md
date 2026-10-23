@@ -1,56 +1,109 @@
-# Welcome to your Expo app 👋
+# 📲 CallMeOut — Emergency Call Dispatcher
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**CallMeOut** is a mobile application built with React Native and Expo, designed to simulate incoming calls during critical or uncomfortable situations. The app allows users to subtly schedule a single call or a sequence of fake calls to gracefully and safely exit unwanted meetings, conversations, or awkward social encounters.
 
-## Get started
+---
 
-1. Install dependencies
+## 🌟 Key Features
 
-   ```bash
-   npm install
-   ```
+- 👤 **Custom Contact Setup:** Set caller name (e.g., *"Mom"*) and upload custom avatar photos.
+- ⏱️ **Call Queue & Scheduling:** Schedule the first incoming call in N minutes and set up a rescue sequence with repeat timers.
+- 🎨 **UI Customization (Call Types):**
+  - 📞 **Standard Phone Call** (System One UI / Android native design).
+  - 🟣 **Viber** (Branded purple interface style).
+  - ✈️ **Telegram** (Branded dark theme with encrypted call status).
+- 🎵 **Custom Ringtones:** Select custom audio files for incoming call ringtones.
+- 🎙️ **In-Call Voice Simulation:** Choose or record a voice message that automatically plays through the earpiece speaker once you answer the call.
+- 💾 **Presets & Quick Launch:** Save your favorite settings as presets for one-tap execution.
+- 🌓 **Premium Adaptive Design:** Complete support for Dark and Light themes built on native OS guidelines.
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 🛠️ Tech Stack
 
-In the output, you'll find options to open the app in a
+* **Framework:** React Native + Expo SDK
+* **Language:** TypeScript
+* **Audio Engine:** expo-av (Handling ringtones & earpiece playback)
+* **Icons:** @expo/vector-icons (MaterialIcons, FontAwesome5)
+* **UI/UX Architecture:** Component-driven architecture powered by a centralized design token system (Colors)
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 🚀 Getting Started
 
-## Get a fresh project
+### 1. Clone the repository
+git clone [https://github.com/your-username/CallMeOut.git](https://github.com/your-username/CallMeOut.git)
+cd CallMeOut
 
-When you're ready, run:
+### 2. Install dependencies
+npm install
 
-```bash
-npm run reset-project
-```
+### 3. Run in development mode
+npx expo start
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 4. Build local Android APK
+npx expo run:android --variant release
 
-### Other setup steps
+---
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## 💡 Product Vision
 
-## Learn more
+Built with a strong focus on **Human-Centric UX**. The interface is crafted to be intuitive and frictionless, featuring clear placeholders and guidance so users can set up a rescue call within seconds, even when under pressure.
 
-To learn more about developing your project with Expo, look at the following resources:
+---
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+# 📲 CallMeOut — Диспетчер Рятівних Дзвінків
 
-## Join the community
+**CallMeOut** — це мобільний додаток на React Native / Expo, розроблений для імітації вхідних дзвінків у критичних або незручних ситуаціях. Додаток дозволяє користувачеві непомітно запланувати один або серію фальшивих викликів, щоб етично й безперешкодно вийти з небажаної зустрічі, розмови чи розгаряченої суперечки.
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 🌟 Ключові Можливості
+
+- 👤 **Гнучке налаштування контакту:** Можливість задати ім'я абонента (наприклад, *"Мама"*), а також завантажити фото аватарки.
+- ⏱️ **Черга та інтервали дзвінків:** Налаштування першого дзвінка через N хвилин та створення серії повторних дзвінків для порятунку з кастомними таймерами.
+- 🎨 **Кастомізація UI (Типи викликів):**
+  - 📞 **Звичайний телефонний виклик** (стилістика системного One UI / Android).
+  - 🟣 **Viber** (брендований фіолетовий стиль інтерфейсу).
+  - ✈️ **Telegram** (брендований темний стиль із зашифрованим статусом).
+- 🎵 **Власні рингтони:** Завантаження кастомних аудіофайлів для мелодії вхідного дзвінка.
+- 🎙️ **Аудіо-імітація розмови (Голос у трубці):** Можливість вибрати або записати голосове повідомлення, яке відтворюватиметься через розмовний динамік після підняття слухавки.
+- 💾 **Шаблони та швидкий запуск:** Збереження готових налаштувань у шаблони для швидкого запуску в один клік.
+- 🌓 **Преміальний адаптивний дизайн:** Підтримка темної та світлої тем згідно з гайдлайнами сучасних мобільних ОС.
+
+---
+
+## 🛠️ Технологічний Стек
+
+* **Framework:** React Native + Expo SDK
+* **Language:** TypeScript
+* **Audio Engine:** expo-av (Управління рингтонами та відтворенням у розмовному динаміку)
+* **Icons:** @expo/vector-icons (MaterialIcons, FontAwesome5)
+* **UI/UX Architecture:** Component-based architecture з гнучкою системою констант тем (Colors)
+
+---
+
+## 🚀 Як запустити проєкт локально
+
+### 1. Клонування репозиторію
+git clone [https://github.com/your-username/CallMeOut.git](https://github.com/your-username/CallMeOut.git)
+cd CallMeOut
+
+### 2. Встановлення залежностей
+npm install
+
+### 3. Запуск у режимі розробки
+npx expo start
+
+### 4. Збірка локального APK для Android
+npx expo run:android --variant release
+
+---
+
+## 💡 Філософія Проєкту
+
+Проєкт розроблено з акцентом на **Human-Centric UX** (людиноцентричний дизайн). Інтерфейс побудований максимально зрозуміло, з підказками та прикладами, щоб користувач міг налаштувати рятівний виклик за лічені секунди навіть у стані стресу.
+
+---
+*Created with ❤️ by Product Engineer*
