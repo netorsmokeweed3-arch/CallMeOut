@@ -18,14 +18,24 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.CallMeOut3"
+      "package": "com.anonymous.CallMeOut3",
+      "permissions": [
+        "USE_FULL_SCREEN_INTENT",
+        "WAKE_LOCK",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_PHONE_CALL",
+        "READ_PHONE_STATE",
+        "MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      
       [
         "expo-splash-screen",
         {
@@ -34,6 +44,14 @@
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76
           }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#ffffff",
+          "sounds": []
         }
       ]
     ],

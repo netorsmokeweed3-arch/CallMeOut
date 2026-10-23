@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import * as Notifications from 'expo-notifications';
 import { SetupScreen } from './src/screens/SetupScreen';
-import { CallScreen } from './src/screens/CallScreen';
+import CallScreen from './src/screens/CallScreen';
 
 type CallType = 'phone' | 'viber' | 'telegram';
 
@@ -24,12 +25,40 @@ export default function App() {
     voiceName: null as string | null,
   });
 
-  // Повна черга дзвінків
   const [queueItems, setQueueItems] = useState<QueueItemData[]>([]);
   const [isQueueActive, setIsQueueActive] = useState<boolean>(false);
   const [currentWaitSeconds, setCurrentWaitSeconds] = useState<number>(0);
 
-  // Запуск черги з налаштувань (приймає повний набір аргументів із SetupScreen)
+  // Перевірка натискання на сповіщення при відкритті з фону або заблокованого екрана
+  useEffect(() => {
+    // 1. Перевірка, чи додаток відкрився саме через тап по сповіщенню (з холодного стану)
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        const data = response.notification.request.content.data;
+        if (data && data.openCallScreen) {
+          setIsInCall(true);
+        }
+      }
+    });
+
+    // 2. Слухачі подій у реальному часі (коли додаток згорнутий або активний)
+    const responseSub = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      if (data && data.openCallScreen) {
+        setIsInCall(true);
+      }
+    });
+
+    const receivedSub = Notifications.addNotificationReceivedListener(_notification => {
+      setIsInCall(true);
+    });
+
+    return () => {
+      responseSub.remove();
+      receivedSub.remove();
+    };
+  }, []);
+
   const handleStartQueue = (
     name: string, 
     image: string | null, 
@@ -52,7 +81,6 @@ export default function App() {
       voiceName,
     });
 
-    // Формуємо масив черги для відображення
     const builtQueue: QueueItemData[] = intervals.map((mins, idx) => ({
       id: String(idx + 1),
       number: idx + 1,
@@ -62,23 +90,19 @@ export default function App() {
 
     setQueueItems(builtQueue);
     setIsQueueActive(true);
-
-    // Перший інтервал у секундах
-    setCurrentWaitSeconds(Math.round(intervals[0] * 60));
+    
+    const exactSeconds = Math.round(intervals[0] * 60);
+    setCurrentWaitSeconds(exactSeconds);
   };
 
-  // Коли таймер очікування добіг кінця — відкриваємо дзвінок
   const handleTimerFinished = () => {
-    setTimeout(() => {
-      setIsInCall(true);
-    }, 0);
+    setIsInCall(true);
   };
 
-  // КОЛИ ДЗВІНОК ЗАВЕРШИВСЯ (ти поклав трубку)
-  const handleEndCall = () => {
+  const handleEndCall = async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
     setIsInCall(false);
 
-    // Оновлюємо статус черги: перший елемент стає виконаним, наступний — активним
     setQueueItems(prev => {
       const activeIndex = prev.findIndex(item => item.status === 'active');
       const updated = [...prev];
@@ -90,15 +114,18 @@ export default function App() {
       const nextActiveIndex = updated.findIndex(item => item.status === 'waiting');
       
       if (nextActiveIndex !== -1) {
-        // Є наступний дзвінок у черзі! Вмикаємо його статус і задаємо час
+        updated[nextActiveIndex].status.toString(); // maintain type safety
         updated[nextActiveIndex].status = 'active';
+        const nextMinutes = updated[nextActiveIndex].minutes;
+        const nextSeconds = Math.round(nextMinutes * 60);
+
         setTimeout(() => {
-          setCurrentWaitSeconds(Math.round(updated[nextActiveIndex].minutes * 60));
+          setCurrentWaitSeconds(nextSeconds);
           setIsQueueActive(true);
-        }, 0);
+        }, 150);
+
         return updated;
       } else {
-        // ДЗВІНКИ СКІНЧИЛИСЯ: повністю закриваємо плашку черги
         setTimeout(() => {
           setIsQueueActive(false);
           setCurrentWaitSeconds(0);
@@ -131,7 +158,8 @@ export default function App() {
           audioName={callParams.audioName}
           voiceName={callParams.voiceName}
           onTimerFinished={handleTimerFinished}
-          onCancelQueue={() => {
+          onCancelQueue={async () => {
+            await Notifications.cancelAllScheduledNotificationsAsync();
             setIsQueueActive(false);
             setCurrentWaitSeconds(0);
             setQueueItems([]);

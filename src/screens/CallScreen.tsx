@@ -8,12 +8,12 @@ interface CallScreenProps {
   callerName: string;
   callerImage: string | null;
   callType: 'phone' | 'viber' | 'telegram';
-  audioUri?: string | null;      // Рингтон (до відповіді)
-  voiceUri?: string | null;      // Голос у трубці після відповіді
+  audioUri?: string | null;      
+  voiceUri?: string | null;      
   onEndCall: () => void;
 }
 
-export const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage, callType, audioUri, voiceUri, onEndCall }) => {
+const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage, callType, audioUri, voiceUri, onEndCall }) => {
   const [isAnswered, setIsAnswered] = useState<boolean>(false);
   const [callDuration, setCallDuration] = useState<number>(0);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -21,36 +21,20 @@ export const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage,
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme === 'light' ? 'light' : 'dark'];
 
-  // Динамічні кольори залежно від типу дзвінка та загальної теми додатку
   const getThemeColors = () => {
     switch (callType) {
       case 'viber':
-        return {
-          background: '#665CAC', // Фіолетовий стиль Viber залишаємо фірмовим
-          subText: '#E9D5FF',
-          textPrimary: '#FFFFFF',
-          accent: '#8B5CF6',
-        };
+        return { background: '#665CAC', subText: '#E9D5FF', accent: '#8B5CF6' };
       case 'telegram':
-        return {
-          background: '#17212B', // Темний стиль Telegram
-          subText: '#788B9B',
-          textPrimary: '#FFFFFF',
-          accent: '#2EA6FF',
-        };
+        return { background: '#17212B', subText: '#788B9B', accent: '#2EA6FF' };
       default:
-        return {
-          background: theme.background, // Беремо твій преміальний фон з theme.ts (#201A18 або #F3F4F6)
-          subText: theme.textSecondary,
-          textPrimary: theme.textPrimary, // Адаптивний основний текст (білий для темної, темний для світлої)
-          accent: '#007AFF',
-        };
+        return { background: '#0D0D0D', subText: '#9CA3AF', accent: '#007AFF' };
     }
   };
 
   const currentTheme = getThemeColors();
 
-  // Відтворення мелодії вхідного дзвінка
+  // Відтворення мелодії без вильوتів помилок, якщо файл не задано
   useEffect(() => {
     let ringtoneSound: Audio.Sound | null = null;
 
@@ -62,16 +46,18 @@ export const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage,
             ? require('../assets/sounds/viber_call.mp3') 
             : callType === 'telegram' 
               ? require('../assets/sounds/telegram_call.mp3') 
-              : require('../assets/sounds/samsung_default.mp3');
+              : null; // Безпечний нульовий об'єкт замість неіснуючого дефолту
 
-        const { sound: createdSound } = await Audio.Sound.createAsync(soundAsset, { 
-          shouldPlay: true, 
-          isLooping: true 
-        });
-        ringtoneSound = createdSound;
-        setSound(createdSound);
+        if (soundAsset) {
+          const { sound: createdSound } = await Audio.Sound.createAsync(soundAsset, { 
+            shouldPlay: true, 
+            isLooping: true 
+          });
+          ringtoneSound = createdSound;
+          setSound(createdSound);
+        }
       } catch (error) {
-        console.log("Помилка відтворення мелодії дзвінка:", error);
+        console.log("Пропущено відтворення кастомного рингтона:", error);
       }
     };
 
@@ -86,7 +72,6 @@ export const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage,
     };
   }, [callType, isAnswered, audioUri]);
 
-  // Таймер розмови після відповіді + відтворення голосу в розмовному динаміку
   useEffect(() => {
     let interval: any;
     if (isAnswered) {
@@ -112,7 +97,7 @@ export const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage,
           );
           setSound(voiceSound);
         } catch (error) {
-          console.log("Помилка відтворення голосу у розмовному динаміку:", error);
+          console.log("Помилка відтворення голосу:", error);
         }
       };
 
@@ -161,14 +146,14 @@ export const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage,
       <View style={styles.topSection}>
         <View style={styles.timerRow}>
           {callType === 'viber' ? (
-            <FontAwesome5 name="viber" size={14} color={currentTheme.subText} style={{ marginRight: 6 }} />
+            <FontAwesome5 name="viber" size={14} color="#FFF" style={{ marginRight: 6 }} />
           ) : callType === 'telegram' ? (
-            <FontAwesome5 name="telegram-plane" size={14} color={currentTheme.subText} style={{ marginRight: 6 }} />
+            <FontAwesome5 name="telegram-plane" size={14} color="#FFF" style={{ marginRight: 6 }} />
           ) : (
-            <MaterialIcons name="phone" size={14} color={currentTheme.subText} style={{ marginRight: 6 }} />
+            <MaterialIcons name="phone" size={14} color="#E5E7EB" style={{ marginRight: 6 }} />
           )}
 
-          <Text style={[styles.callStatus, { color: currentTheme.subText }]}>
+          <Text style={[styles.callStatus, { color: '#FFF' }]}>
             {isAnswered ? formatTime(callDuration) : (
               callType === 'viber' ? 'Вхідний виклик Viber...' :
               callType === 'telegram' ? 'Вхідний виклик Telegram...' :
@@ -177,8 +162,7 @@ export const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage,
           </Text>
         </View>
 
-        {/* Використовуємо адаптивний колір тексту з теми ( textPrimary ) */}
-        <Text style={[styles.callerName, { color: currentTheme.textPrimary }]}>{callerName}</Text>
+        <Text style={[styles.callerName, { color: '#FFF' }]}>{callerName}</Text>
         <Text style={[styles.callTypeSubtext, { color: currentTheme.subText }]}>
           {callType === 'viber' ? 'Виклик Viber' : callType === 'telegram' ? 'Зашифрований виклик Telegram' : 'Мобільна мережа'}
         </Text>
@@ -208,10 +192,10 @@ export const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage,
                 const IconComponent = btn.iconLib;
                 return (
                   <View key={btn.id} style={styles.gridItem}>
-                    <TouchableOpacity style={[styles.actionCircle, { backgroundColor: theme.surface }]}>
-                      <IconComponent name={btn.iconName as any} size={24} color={currentTheme.textPrimary} />
+                    <TouchableOpacity style={[styles.actionCircle, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                      <IconComponent name={btn.iconName as any} size={24} color="#FFF" />
                     </TouchableOpacity>
-                    <Text style={[styles.actionText, { color: currentTheme.textPrimary }]}>{btn.title}</Text>
+                    <Text style={[styles.actionText, { color: '#FFF' }]}>{btn.title}</Text>
                   </View>
                 );
               })}
@@ -227,6 +211,8 @@ export const CallScreen: React.FC<CallScreenProps> = ({ callerName, callerImage,
   );
 };
 
+export default CallScreen;
+
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'space-between', alignItems: 'center' },
   topSection: { alignItems: 'center', marginTop: 50, width: '100%' },
@@ -237,12 +223,7 @@ const styles = StyleSheet.create({
   avatarContainer: { width: 110, height: 110, borderRadius: 55, overflow: 'hidden', marginTop: 15, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' },
   avatar: { width: '100%', height: '100%' },
   bottomSection: { marginBottom: 70, width: '100%', alignItems: 'center' },
-  incomingControls: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    width: '100%', 
-    paddingHorizontal: 40 
-  },
+  incomingControls: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', paddingHorizontal: 40 },
   activeControls: { alignItems: 'center', width: '100%' },
   gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-around', width: '90%' },
   gridItem: { width: '30%', alignItems: 'center', marginBottom: 20 },

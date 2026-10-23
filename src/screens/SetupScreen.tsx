@@ -3,6 +3,15 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, Image, ScrollView,
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+} as any);
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -69,8 +78,8 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   const [callerImage, setCallerImage] = useState<string | null>(null);
   const [callType, setCallType] = useState<CallType>('phone');
   
-  const [firstCallMinutes, setFirstCallMinutes] = useState<string>('1'); 
-  const [subsequentIntervals, setSubsequentIntervals] = useState<string[]>(['3', '5']);
+  const [firstCallMinutes, setFirstCallMinutes] = useState<string>('0.1'); 
+  const [subsequentIntervals, setSubsequentIntervals] = useState<string[]>(['0.1', '0.1']);
 
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [audioName, setAudioName] = useState<string | null>(null);
@@ -79,29 +88,80 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   const [voiceName, setVoiceName] = useState<string | null>(null);
 
   const [myTemplates, setMyTemplates] = useState<CustomTemplate[]>([]);
-
-  // Живий відлік для поточного таймера
   const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(0);
 
-  // Синхронізуємо секунди з пропсами від App.tsx
   useEffect(() => {
-    setTimeLeftSeconds(initialSeconds);
+    if (initialSeconds > 0) {
+      setTimeLeftSeconds(initialSeconds);
+      scheduleBackgroundNotification(initialSeconds);
+    }
   }, [initialSeconds]);
 
-  // Таймер зворотного відліку
+  useEffect(() => {
+    (async () => {
+      await Notifications.requestPermissionsAsync();
+    })();
+  }, []);
+
   useEffect(() => {
     let interval: any;
     if (isQueueActive && timeLeftSeconds > 0) {
+      const targetTime = Date.now() + timeLeftSeconds * 1000;
+
       interval = setInterval(() => {
-        setTimeLeftSeconds(prev => {
-          if (prev > 1) return prev - 1;
+        const now = Date.now();
+        const diffInSecs = Math.ceil((targetTime - now) / 1000);
+
+        if (diffInSecs <= 0) {
+          clearInterval(interval);
+          setTimeLeftSeconds(0);
           onTimerFinished();
-          return 0;
-        });
-      }, 1000);
+        } else {
+          setTimeLeftSeconds(diffInSecs);
+        }
+      }, 500); 
     }
     return () => clearInterval(interval);
   }, [isQueueActive, timeLeftSeconds]);
+
+  // НАЛАШТУВАННЯ КАНАЛУ СПОВІЩЕНЬ ДЛЯ ФОНУ (Максимальний пріоритет та видимість на блокуванні)
+  const scheduleBackgroundNotification = async (durationInSeconds: number) => {
+    try {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('emergency-call-channel', {
+          name: 'Екстрені рятівні дзвінки',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 1000, 500, 1000],
+          lightColor: '#FF231F',
+          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+          bypassDnd: true,
+          sound: 'default',
+        });
+      }
+
+      if (durationInSeconds >= 1) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `📞 Вхідний дзвінок: ${callerName}`,
+            body: 'Час рятівного дзвінка! Натисніть, щоб відповісти.',
+            sound: true,
+            priority: Notifications.AndroidNotificationPriority.MAX,
+            data: { openCallScreen: true },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+            seconds: Math.floor(durationInSeconds),
+            repeats: false,
+            channelId: 'emergency-call-channel',
+          } as any,
+        });
+      }
+    } catch (error) {
+      console.log('Помилка планування сповіщення:', error);
+    }
+  };
 
   const formatCountdown = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -141,7 +201,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   };
 
   const addSubsequentCall = () => {
-    setSubsequentIntervals([...subsequentIntervals, '3']);
+    setSubsequentIntervals([...subsequentIntervals, '0.1']);
   };
 
   const removeSubsequentCall = (index: number) => {
@@ -183,13 +243,17 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
 
   const handleStartQueueAction = () => {
     const firstMins = parseFloat(firstCallMinutes);
-    if (isNaN(firstMins) || firstMins < 0) { Alert.alert('Увага', 'Введіть коректний час для першого дзвінка!'); return; }
+    if (isNaN(firstMins) || firstMins <= 0) { Alert.alert('Увага', 'Введіть коректний час для першого дзвінка!'); return; }
 
     const parsedSubsequent = subsequentIntervals
       .map(item => parseFloat(item))
       .filter(num => !isNaN(num) && num > 0);
 
     const allMinutes = [firstMins, ...parsedSubsequent];
+    const totalFirstSeconds = Math.round(firstMins * 60);
+
+    setTimeLeftSeconds(totalFirstSeconds);
+    scheduleBackgroundNotification(totalFirstSeconds);
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     onStartCall(callerName, callerImage, callType, audioUri, audioName, voiceUri, voiceName, allMinutes);
@@ -212,9 +276,18 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
       .filter(num => !isNaN(num) && num > 0);
 
     const allMinutes = [firstMins, ...parsedSubsequent];
+    const totalFirstSeconds = Math.round(firstMins * 60);
+
+    setTimeLeftSeconds(totalFirstSeconds);
+    scheduleBackgroundNotification(totalFirstSeconds);
 
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     onStartCall(tmpl.callerName, tmpl.callerImage, tmpl.callType, tmpl.audioUri, tmpl.audioName, tmpl.voiceUri, tmpl.voiceName, allMinutes);
+  };
+
+  const handleCancelQueueAction = async () => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    onCancelQueue();
   };
 
   return (
@@ -261,13 +334,13 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               </View>
 
               <View style={styles.backgroundHintBox}>
-                <MaterialIcons name="info-outline" size={16} color="#60A5FA" />
+                <MaterialIcons name="security" size={16} color="#60A5FA" />
                 <Text style={styles.backgroundHintText}>
-                  Згорніть додаток. Відлік іде тільки після завершення попереднього дзвінка!
+                  Таймер синхронізовано з нативним годинником.
                 </Text>
               </View>
 
-              <TouchableOpacity style={styles.cancelButtonBottom} onPress={onCancelQueue}>
+              <TouchableOpacity style={styles.cancelButtonBottom} onPress={handleCancelQueueAction}>
                 <Text style={styles.cancelButtonBottomText}>Скасувати всю чергу ❌</Text>
               </TouchableOpacity>
             </View>
@@ -314,7 +387,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                   value={firstCallMinutes} 
                   onChangeText={setFirstCallMinutes} 
                   keyboardType="numeric" 
-                  placeholder="Наприклад: 1 або 0.1" 
+                  placeholder="Наприклад: 0.1 (6 секунд)" 
                   placeholderTextColor="#888" 
                 />
               </View>
@@ -340,7 +413,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                       value={val} 
                       onChangeText={(text) => updateSubsequentInterval(text, index)} 
                       keyboardType="numeric" 
-                      placeholder="3" 
+                      placeholder="0.1" 
                       placeholderTextColor="#888" 
                     />
                   </View>
